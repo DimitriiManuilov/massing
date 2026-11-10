@@ -1,0 +1,43 @@
+{
+  "name": "massing",
+  "productName": "МАССИНГ",
+  "version": "1.0.0",
+  "description": "Объёмно-пространственная модель городского участка для любого города мира",
+  "main": "desktop/main.js",
+  "author": "Дмитрий Мануйлов",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac --dir",
+    "dmg": "electron-builder --mac dmg"
+  },
+  "devDependencies": {
+    "electron": "^43.2.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "ru.manuilov.massing",
+    "productName": "МАССИНГ",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "index.html",
+      "case.html",
+      "app/**/*",
+      "data/**/*",
+      "vendor/**/*",
+      "examples/**/*",
+      "desktop/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.graphics-design",
+      "target": [
+        "dir",
+        "dmg"
+      ],
+      "icon": "desktop/icon.icns"
+    }
+  }
+}

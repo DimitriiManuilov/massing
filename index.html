@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>МАССИНГ — визуализатор городской среды</title>
+<link rel="stylesheet" href="vendor/leaflet.css">
+<link rel="stylesheet" href="app/style.css">
+<script src="vendor/leaflet.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "./vendor/three.module.js",
+    "three/addons/": "./vendor/"
+  }
+}
+</script>
+</head>
+<body>
+
+<!-- ============ ШАГ 1: ВЫБОР МЕСТНОСТИ ============ -->
+<section id="screen-pick" class="screen">
+  <div id="map"></div>
+
+  <div class="pick-panel">
+    <header class="brand">
+      <h1>МАССИНГ</h1>
+      <p>объёмно-пространственная модель участка · любой город мира</p>
+    </header>
+
+    <div class="field">
+      <label for="search">Найти место</label>
+      <div class="search-row">
+        <input id="search" type="text" placeholder="Хамовники · Le Marais · Shinjuku" autocomplete="off">
+        <button id="search-go" class="btn-icon" title="Найти">→</button>
+      </div>
+      <div id="search-results" class="search-results"></div>
+    </div>
+
+    <div class="field">
+      <label for="radius">Радиус участка <span class="mono" id="radius-val">250 м</span></label>
+      <input type="range" id="radius" min="100" max="1200" step="10" value="250">
+      <label class="check"><input type="checkbox" id="opt-terrain" checked><span>Загружать рельеф</span></label>
+    </div>
+
+    <div class="hint" id="hint">
+      <strong>Кликните по карте</strong> — там встанет центр участка.
+      Потяните от центра, чтобы задать радиус на глаз, или выставьте
+      его ползунком. Карта двигается с зажатым <kbd>Shift</kbd>.
+    </div>
+
+    <div class="readout">
+      <div class="readout-row"><span>Площадь круга</span><b id="ro-area">—</b></div>
+      <div class="readout-row"><span>Диаметр</span><b id="ro-size">—</b></div>
+      <div class="readout-row"><span>Центр</span><b id="ro-center">—</b></div>
+    </div>
+
+    <div id="area-warning" class="warning" hidden></div>
+
+    <div class="field">
+      <label>Мои участки</label>
+      <div class="projects" id="projects"></div>
+    </div>
+
+    <div class="field">
+      <label>Города для начала</label>
+      <div class="chips" id="presets"></div>
+    </div>
+
+    <button id="build" class="btn-primary" disabled>Открыть в редакторе →</button>
+
+    <footer class="pick-footer">
+      Данные © участники OpenStreetMap · рельеф AWS Terrain Tiles ·
+      возраст застройки Москвы © how-old-is-this.house, 2020 (ODbL) ·
+      <a href="case.html">о проекте</a>
+    </footer>
+  </div>
+</section>
+
+<!-- ============ ШАГ 2: РЕДАКТОР ============ -->
+<section id="screen-view" class="screen" hidden>
+  <div id="viewport"></div>
+
+  <div class="topbar">
+    <button id="back" class="btn-ghost">← местность</button>
+    <div class="topbar-title" id="view-title">—</div>
+    <div class="topbar-actions">
+      <button id="save-site" class="btn-ghost" title="Сохранить участок с разметкой">Сохранить</button>
+      <button id="exp-png" class="btn-ghost">PNG</button>
+      <button id="exp-glb" class="btn-ghost" title="Модель со слоями — Blender, Rhino, Unreal">GLB</button>
+      <button id="exp-obj" class="btn-ghost" title="Модель со слоями — для программ без glTF">OBJ</button>
+      <button id="exp-geo" class="btn-ghost" title="Разметка, помеченные дома и проектные объёмы в GeoJSON">GeoJSON</button>
+    </div>
+  </div>
+
+  <aside class="controls" id="controls">
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="scene">Сцена</button>
+      <button class="tab" data-tab="site">Участок</button>
+      <button class="tab" data-tab="draw">Разметка</button>
+      <button class="tab" data-tab="ai">Нейросеть</button>
+    </nav>
+
+    <!-- вкладка: сцена -->
+    <div class="tab-body" data-body="scene">
+      <section class="ctl-group" data-group="sun">
+        <h3><button class="ctl-head" type="button">Солнце<i class="caret"></i></button></h3>
+        <div class="ctl-body"><div class="ctl-inner">
+          <div class="ctl-row">
+            <label for="date">Дата</label>
+            <input type="date" id="date" value="2026-06-21">
+          </div>
+          <div class="ctl-row">
+            <label for="time">Местное время <span class="mono" id="time-val">14:00</span></label>
+            <input type="range" id="time" min="0" max="1439" step="10" value="840">
+          </div>
+          <div class="ctl-row">
+            <label for="tz">Часовой пояс <span class="mono" id="tz-val">UTC+3</span></label>
+            <input type="range" id="tz" min="-12" max="14" step="1" value="3">
+          </div>
+          <div class="sun-readout" id="sun-readout">—</div>
+        </div></div>
+      </section>
+
+      <section class="ctl-group" data-group="cam">
+        <h3><button class="ctl-head" type="button">Камера<i class="caret"></i></button></h3>
+        <div class="ctl-body"><div class="ctl-inner">
+          <div class="seg" id="cam-mode">
+            <button data-cam="persp" class="active">Перспектива</button>
+            <button data-cam="ortho">Аксонометрия</button>
+          </div>
+          <div class="seg" id="cam-preset">
+            <button data-view="iso" class="active">Изометрия</button>
+            <button data-view="top">План</button>
+            <button data-view="eye">С земли</button>
+          </div>
+          <label class="check"><input type="checkbox" id="l-orbit"><span>Медленный облёт</span></label>
+          <button class="btn-line" id="replay">Проиграть рост застройки</button>
+        </div></div>
+      </section>
+
+      <section class="ctl-group" data-group="objects">
+        <h3><button class="ctl-head" type="button">Объекты<i class="caret"></i></button></h3>
+        <div class="ctl-body"><div class="ctl-inner">
+          <label class="check"><input type="checkbox" id="l-roads" checked><span>Улично-дорожная сеть</span></label>
+          <label class="check"><input type="checkbox" id="l-green" checked><span>Озеленение</span></label>
+          <label class="check"><input type="checkbox" id="l-water" checked><span>Вода</span></label>
+          <label class="check"><input type="checkbox" id="l-paved" checked><span>Дворовые покрытия</span></label>
+          <label class="check"><input type="checkbox" id="l-trees" checked><span>Деревья</span></label>
+          <label class="check"><input type="checkbox" id="l-cars" checked><span>Транспорт</span></label>
+          <label class="check"><input type="checkbox" id="l-lamps" checked><span>Освещение</span></label>
+        </div></div>
+      </section>
+
+      <section class="ctl-group" data-group="render">
+        <h3><button class="ctl-head" type="button">Отрисовка<i class="caret"></i></button></h3>
+        <div class="ctl-body"><div class="ctl-inner">
+          <label class="check"><input type="checkbox" id="l-edges" checked><span>Контуры объёмов</span></label>
+          <label class="check"><input type="checkbox" id="l-shadow" checked><span>Тени</span></label>
+          <label class="check"><input type="checkbox" id="l-ao" checked><span>Объёмное затенение (GTAO)</span></label>
+          <label class="check"><input type="checkbox" id="l-tilt" checked><span>Эффект макета (tilt-shift)</span></label>
+          <label class="check"><input type="checkbox" id="l-est"><span>Отметить оценочные высоты</span></label>
+        </div></div>
+      </section>
+    </div>
+
+    <!-- вкладка: участок -->
+    <div class="tab-body" data-body="site" hidden>
+      <section class="ctl-group" data-group="insol">
+        <h3><button class="ctl-head" type="button">Инсоляция<i class="caret"></i></button></h3>
+        <div class="ctl-body"><div class="ctl-inner">
+          <button class="btn-line" id="insol-run">Рассчитать за день</button>
+          <div class="stats" id="insol-stats"></div>
+          <div class="insol-legend" id="insol-legend" hidden>
+            <div class="insol-bar"></div>
+            <div class="insol-ticks"><span>ниже нормы</span><span>2 ч</span><span id="insol-peak">максимум дня</span></div>
+          </div>
+          <label class="check" id="insol-toggle-row" hidden>
+            <input type="checkbox" id="l-insol" checked><span>Показывать карту</span>
+          </label>
+          <div class="stat-note">Считается по дате из вкладки «Сцена» с шагом
+            двадцать минут. Норматив инсоляции — два часа; доля берётся от
+            открытой земли внутри круга, без пятен застройки.</div>
+        </div></div>
+      </section>
+
+      <section class="ctl-group" data-group="stats">
+        <h3><button class="ctl-head" type="button">Показатели<i class="caret"></i></button></h3>
+        <div class="ctl-body"><div class="ctl-inner">
+          <div class="stats" id="stats"></div>
+        </div></div>
+      </section>
+    </div>
+
+    <!-- вкладка: разметка -->
+    <div class="tab-body" data-body="draw" hidden>
+      <section class="ctl-group" data-group="tools">
+        <h3><button class="ctl-head" type="button">Инструмент<i class="caret"></i></button></h3>
+        <div class="ctl-body"><div class="ctl-inner">
+          <div class="seg seg-wrap" id="draw-tool">
+            <button data-tool="none" class="active">Смотреть</button>
+            <button data-tool="line">Линия</button>
+            <button data-tool="area">Площадка</button>
+            <button data-tool="point">Метка</button>
+            <button data-tool="mark">Пометить дома</button>
+          </div>
+          <div class="ctl-row">
+            <label for="draw-buffer">Буфер <span class="mono" id="draw-buffer-val">0 м</span></label>
+            <input type="range" id="draw-buffer" min="0" max="300" step="5" value="0">
+          </div>
+          <div class="draw-hint" id="draw-hint">Выберите инструмент.</div>
+        </div></div>
+      </section>
+
+      <section class="ctl-group" data-group="drawn">
+        <h3><button class="ctl-head" type="button">Разметка<i class="caret"></i></button></h3>
+        <div class="ctl-body"><div class="ctl-inner">
+          <div class="draw-list" id="draw-list"></div>
+          <div class="stats" id="draw-stats"></div>
+          <button class="btn-line" id="draw-undo">Отменить последнее <kbd>⌘Z</kbd></button>
+          <button class="btn-line" id="draw-clear">Очистить разметку</button>
+        </div></div>
+      </section>
+    </div>
+
+    <!-- вкладка: нейросеть -->
+    <div class="tab-body" data-body="ai" hidden>
+      <div class="ctl-group ai">
+        <h3>Доступ <button class="link" id="ai-setup">ключ и модель</button></h3>
+        <div class="ctl-row">
+          <label for="ai-extra">Задание или уточнение</label>
+          <textarea id="ai-extra" rows="3" placeholder="кирпичные фасады, много зелени&#10;или: квартал 8 этажей вдоль набережной"></textarea>
+        </div>
+        <div class="ctl-row">
+          <label for="ai-style">Освещение для рендера</label>
+          <select id="ai-style">
+            <option value="day">Ясный день</option>
+            <option value="evening">Закат</option>
+            <option value="night">Ночь</option>
+            <option value="winter">Зима</option>
+            <option value="rain">После дождя</option>
+          </select>
+        </div>
+        <button class="btn-ai" id="ai-render">Фотореалистичный рендер</button>
+        <button class="btn-ai" id="ai-analyze">Аналитическая записка</button>
+        <button class="btn-ai" id="ai-propose">Разместить проектные объёмы</button>
+        <button class="btn-ai ghost" id="ai-clear" hidden>Убрать проектные объёмы</button>
+        <div class="ai-status" id="ai-status"></div>
+      </div>
+    </div>
+  </aside>
+  <!-- Кнопка сворачивания — сосед панели, а не её содержимое:
+       внутри её обрезал собственный overflow панели. -->
+  <button class="controls-toggle" id="controls-toggle" title="Свернуть">⟨</button>
+
+  <div class="info-card" id="info-card" hidden>
+    <button class="info-close" id="info-close">×</button>
+    <div id="info-body"></div>
+  </div>
+
+  <!-- Подпись «С» сверху не вращалась вместе с картушкой и при
+       повороте камеры просто врала; север показывает стрелка. -->
+  <div class="compass" id="compass" title="Север">
+    <svg viewBox="0 0 48 48"><g id="compass-rot">
+      <circle cx="24" cy="24" r="22" class="c-ring"/>
+      <path d="M24 6 L29 26 L24 22 L19 26 Z" class="c-n"/>
+      <path d="M24 42 L19 22 L24 26 L29 22 Z" class="c-s"/>
+    </g></svg>
+  </div>
+
+  <div class="scalebar"><div class="scalebar-line"></div><span id="scale-label">100 м</span></div>
+  <div class="perf" id="perf"></div>
+  <div class="toast" id="toast"></div>
+  <div class="keyhint" id="keyhint">
+    <span><b>1</b> <b>2</b> <b>3</b> — вид</span>
+    <span><b>Пробел</b> — рост</span>
+    <span><b>Tab</b> — панель</span>
+  </div>
+
+  <div class="loader" id="loader" hidden>
+    <div class="loader-box">
+      <div class="loader-bar" id="loader-bar"><i id="loader-fill"></i></div>
+      <div class="loader-text" id="loader-text">Запрос к OpenStreetMap…</div>
+      <!-- Полоса говорит «сколько», список — «что именно». Ожидание
+           Overpass занимает большую часть времени, и без названий
+           стадий оно неотличимо от зависания. -->
+      <ol class="loader-stages" id="loader-stages"></ol>
+      <div class="loader-actions" id="loader-actions" hidden>
+        <button class="btn-ghost" id="loader-back">← вернуться к карте</button>
+        <button class="btn-ghost" id="loader-retry">перезагрузить страницу</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="modal" id="modal" hidden>
+  <div class="modal-box" id="modal-box">
+    <button class="modal-close" id="modal-close">×</button>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<script type="module" src="app/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,457 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>МАССИНГ — case study</title>
+<style>
+:root{
+  --paper:#f6f5f2; --paper-2:#fff; --ink:#1b1a18; --ink-2:#56534d; --ink-3:#8c877f;
+  --line:#dedbd4; --line-2:#ecebe6; --accent:#b4472c; --accent-dim:#f0dcd5;
+  --mono: ui-monospace,"SF Mono","JetBrains Mono",Menlo,monospace;
+  --sans: -apple-system,BlinkMacSystemFont,"Inter","Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans);
+  -webkit-font-smoothing:antialiased; line-height:1.6;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:0 28px}
+
+/* шапка */
+.top{
+  position:sticky; top:0; z-index:10; background:#f6f5f2ee; backdrop-filter:blur(8px);
+  border-bottom:1px solid var(--line);
+}
+.top-in{display:flex; align-items:center; gap:16px; height:58px}
+.mark{
+  width:22px;height:22px;flex:none;
+  background:linear-gradient(135deg,var(--ink) 0 46%,transparent 46%),
+             linear-gradient(45deg,var(--ink-3) 0 46%,transparent 46%);
+  background-color:var(--line-2);
+}
+.top h1{margin:0; font-size:13px; letter-spacing:.18em; font-weight:600}
+.top nav{margin-left:auto; display:flex; gap:6px; align-items:center}
+.lang{
+  border:1px solid var(--line); background:var(--paper); border-radius:3px;
+  font:500 11px var(--sans); color:var(--ink-2); padding:6px 10px; cursor:pointer;
+}
+.lang.on{background:var(--ink); color:#fff; border-color:var(--ink)}
+.cta{
+  background:var(--accent); color:#fff; border:0; border-radius:3px;
+  padding:8px 14px; font:600 11.5px var(--sans); letter-spacing:.04em;
+  text-decoration:none; margin-left:8px;
+}
+.cta:hover{background:var(--ink)}
+
+/* герой */
+.hero{padding:64px 0 40px}
+.eyebrow{
+  font:600 10.5px var(--sans); letter-spacing:.16em; text-transform:uppercase;
+  color:var(--accent); margin-bottom:14px;
+}
+.hero h2{
+  margin:0 0 18px; font-size:clamp(30px,4.6vw,50px); line-height:1.1;
+  letter-spacing:-.02em; font-weight:600; max-width:20ch;
+}
+.lede{font-size:17px; color:var(--ink-2); max-width:62ch; margin:0}
+.meta{
+  display:flex; flex-wrap:wrap; gap:26px; margin-top:30px; padding-top:22px;
+  border-top:1px solid var(--line);
+}
+.meta div{font-size:12px; color:var(--ink-3)}
+.meta b{display:block; font:500 13px var(--mono); color:var(--ink); margin-top:3px}
+
+figure{margin:0}
+.shot{
+  width:100%; border:1px solid var(--line); border-radius:4px; display:block;
+  background:var(--paper-2);
+}
+figcaption{font-size:12px; color:var(--ink-3); margin-top:9px; line-height:1.5}
+
+section{padding:52px 0; border-top:1px solid var(--line)}
+h3{
+  margin:0 0 8px; font:600 10.5px var(--sans); letter-spacing:.16em;
+  text-transform:uppercase; color:var(--accent);
+}
+h4{margin:0 0 20px; font-size:26px; letter-spacing:-.01em; font-weight:600}
+p{max-width:68ch; color:var(--ink-2); margin:0 0 14px}
+strong{color:var(--ink); font-weight:600}
+
+.cols{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:28px; margin-top:28px}
+.card{border-top:2px solid var(--ink); padding-top:14px}
+.card h5{margin:0 0 8px; font-size:14.5px; font-weight:600}
+.card p{font-size:13.5px; margin:0}
+
+.gallery{display:grid; grid-template-columns:repeat(auto-fit,minmax(320px,1fr)); gap:22px; margin-top:28px}
+
+/* схема потока */
+.flow{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px;
+  margin:28px 0 8px;
+}
+.node{
+  background:var(--paper-2); border:1px solid var(--line); border-radius:4px;
+  padding:14px 15px; position:relative;
+}
+.node b{display:block; font-size:13px; margin-bottom:5px}
+.node span{font-size:11.5px; color:var(--ink-3); line-height:1.45; display:block}
+.node.worker{border-color:var(--accent); background:var(--accent-dim)}
+.node.worker span{color:#7d2f1c}
+
+table{border-collapse:collapse; width:100%; margin-top:24px; font-size:13.5px}
+th,td{text-align:left; padding:12px 14px 12px 0; border-bottom:1px solid var(--line-2); vertical-align:top}
+th{
+  font:600 10.5px var(--sans); letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-3); border-bottom-color:var(--line);
+}
+td:first-child{color:var(--ink); font-weight:500; width:30%}
+td:last-child{color:var(--ink-2)}
+td .num{font-family:var(--mono); color:var(--accent)}
+
+ul{color:var(--ink-2); max-width:68ch; padding-left:20px; margin:0 0 14px}
+li{margin-bottom:8px}
+
+.stack{display:flex; flex-wrap:wrap; gap:8px; margin-top:20px}
+.pill{
+  font:500 11.5px var(--mono); color:var(--ink-2);
+  border:1px solid var(--line); border-radius:100px; padding:6px 13px; background:var(--paper-2);
+}
+.note{
+  background:var(--paper-2); border-left:2px solid var(--accent);
+  padding:16px 18px; margin-top:26px; font-size:13.5px; color:var(--ink-2); max-width:70ch;
+}
+footer{padding:40px 0 60px; font-size:12px; color:var(--ink-3); border-top:1px solid var(--line)}
+footer a{color:var(--accent)}
+
+/* Прячем неактивный язык, а не показываем активный: так элементы
+   сохраняют свой естественный display (span в схеме — блочный,
+   в тексте — строчный), и правила вроде .node span не перебивают
+   переключение по специфичности. */
+body.ru [data-lang="en"], body.en [data-lang="ru"]{display:none}
+@media (max-width:640px){ .hero{padding:40px 0 28px} section{padding:38px 0} }
+</style>
+</head>
+<body class="ru">
+
+<header class="top">
+  <div class="wrap top-in">
+    <div class="mark"></div>
+    <h1>МАССИНГ</h1>
+    <nav>
+      <button class="lang on" data-set="ru">RU</button>
+      <button class="lang" data-set="en">EN</button>
+      <a class="cta" href="index.html"><span data-lang="ru">Открыть инструмент</span><span data-lang="en">Open the tool</span></a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="hero">
+    <div class="eyebrow">
+      <span data-lang="ru">Веб-инструмент · 2026</span>
+      <span data-lang="en">Web tool · 2026</span>
+    </div>
+    <h2>
+      <span data-lang="ru">Объёмная модель любого городского участка — за минуту, в браузере</span>
+      <span data-lang="en">A massing model of any urban site — in a minute, in the browser</span>
+    </h2>
+    <p class="lede">
+      <span data-lang="ru">Ставишь точку на карте, задаёшь радиус — получаешь трёхмерный керн местности:
+        застройка с реальными высотами, рельеф, улицы, тени на выбранную дату и расчётные
+        показатели плотности. Дальше — фотореалистичный рендер, аналитическая записка или
+        проектные объёмы через языковую модель. Работает для любого города, где есть
+        OpenStreetMap.</span>
+      <span data-lang="en">Drop a point on the map, set a radius — get a three-dimensional core of the
+        site: buildings at real heights, terrain, streets, shadows for a chosen date, and
+        computed density metrics. Then a photoreal render, an analytical brief, or proposed
+        massing volumes via a language model. Works for any city covered by OpenStreetMap.</span>
+    </p>
+
+    <div class="meta">
+      <div><span data-lang="ru">Роль</span><span data-lang="en">Role</span>
+        <b><span data-lang="ru">Замысел, код, дизайн</span><span data-lang="en">Concept, code, design</span></b></div>
+      <div><span data-lang="ru">Стек</span><span data-lang="en">Stack</span>
+        <b>three.js · Web Worker · WebGL</b></div>
+      <div><span data-lang="ru">Данные</span><span data-lang="en">Data</span>
+        <b>OpenStreetMap · SRTM</b></div>
+      <div><span data-lang="ru">Покрытие</span><span data-lang="en">Coverage</span>
+        <b><span data-lang="ru">любой город мира</span><span data-lang="en">any city worldwide</span></b></div>
+    </div>
+  </div>
+
+  <figure>
+    <img class="shot" src="examples/case_iso.png" alt="Изометрия участка в Замоскворечье">
+    <figcaption>
+      <span data-lang="ru">Замоскворечье, радиус 250 м. Кремль, Москва-река, Балчуг.
+        Серый массинг, солнце 21 июня, 14:00 по местному времени.</span>
+      <span data-lang="en">Zamoskvorechye, Moscow, 250 m radius. Grey massing, sun at 14:00
+        local time on 21 June.</span>
+    </figcaption>
+  </figure>
+
+  <section>
+    <h3><span data-lang="ru">Задача</span><span data-lang="en">Problem</span></h3>
+    <h4><span data-lang="ru">Контекст-анализ съедает день, а нужен в первый час</span>
+        <span data-lang="en">Context analysis eats a day but is needed in the first hour</span></h4>
+    <p>
+      <span data-lang="ru">Любой градостроительный проект начинается с вопроса «что вокруг».
+        Обычный путь — выгрузить OSM, почистить в QGIS, поднять высоты, экспортировать в
+        трёхмерный редактор, настроить свет. Это несколько часов на участок, и повторять
+        приходится для каждой площадки. В результате контекст либо изучают поверхностно,
+        либо не сравнивают варианты вовсе.</span>
+      <span data-lang="en">Every planning project starts with «what surrounds the site». The usual
+        route — export OSM, clean it in QGIS, extrude heights, move to a 3D editor, set up
+        lighting — takes hours per site and has to be repeated for each one. Context ends up
+        studied superficially, and alternatives rarely get compared at all.</span>
+    </p>
+    <p>
+      <span data-lang="ru">Готовые сервисы либо привязаны к одному городу, либо показывают картинку
+        без цифр, либо требуют подписки и загрузки файлов. Мне был нужен инструмент, где
+        путь от «где» до «понял» занимает минуту, показатели считаются честно, а результат
+        уходит в подачу и обратно в QGIS.</span>
+      <span data-lang="en">Existing services are either tied to a single city, or show a picture with
+        no numbers, or require a subscription and file uploads. I wanted the path from
+        «where» to «understood» to take a minute, with metrics computed honestly and results
+        exporting into a presentation and back into QGIS.</span>
+    </p>
+  </section>
+
+  <section>
+    <h3><span data-lang="ru">Решение</span><span data-lang="en">What it does</span></h3>
+    <h4><span data-lang="ru">Четыре вещи, каждая — за один шаг</span>
+        <span data-lang="en">Four things, one step each</span></h4>
+
+    <div class="cols">
+      <div class="card">
+        <h5><span data-lang="ru">Модель местности</span><span data-lang="en">Site model</span></h5>
+        <p><span data-lang="ru">Круг радиусом 100–1200 м: здания с высотами из OSM, рельеф из
+          открытых DEM, улично-дорожная сеть, вода, озеленение.</span>
+          <span data-lang="en">A circle of 100–1200 m: buildings with OSM heights, terrain from open
+          DEM, street network, water, greenery.</span></p>
+      </div>
+      <div class="card">
+        <h5><span data-lang="ru">Солнце и тени</span><span data-lang="en">Sun and shadows</span></h5>
+        <p><span data-lang="ru">Положение солнца по алгоритму NOAA на любую дату, час и широту.
+          Тени пересчитываются мгновенно — видно, кто кому загораживает свет.</span>
+          <span data-lang="en">NOAA solar position for any date, hour and latitude. Shadows update
+          instantly — you see who blocks whose light.</span></p>
+      </div>
+      <div class="card">
+        <h5><span data-lang="ru">Показатели</span><span data-lang="en">Metrics</span></h5>
+        <p><span data-lang="ru">Плотность застройки, коэффициент плотности, средняя и максимальная
+          высота, перепад рельефа и доля зданий с достоверными высотами.</span>
+          <span data-lang="en">Site coverage, floor area ratio, mean and maximum height, terrain
+          relief, and the share of buildings with reliable heights.</span></p>
+      </div>
+      <div class="card">
+        <h5><span data-lang="ru">Языковая модель</span><span data-lang="en">Language model</span></h5>
+        <p><span data-lang="ru">Кадр → фотореалистичная визуализация. Цифры + кадр → градостроительный
+          разбор. Текстовое задание → проектные объёмы прямо в сцене.</span>
+          <span data-lang="en">Frame → photoreal render. Numbers + frame → an urban design brief.
+          A text prompt → proposed volumes placed in the scene.</span></p>
+      </div>
+    </div>
+
+    <div class="gallery">
+      <figure>
+        <img class="shot" src="examples/case_top.png" alt="План участка">
+        <figcaption><span data-lang="ru">План: кварталы, дворы, ширина улиц. Обрезка строго по кругу — здания на границе входят в показатели той частью пятна, что попала внутрь.</span>
+          <span data-lang="en">Plan view. Clipping follows the circle exactly — edge buildings count only by the footprint area inside it.</span></figcaption>
+      </figure>
+      <figure>
+        <img class="shot" src="examples/case_eye.png" alt="Вид с уровня глаз">
+        <figcaption><span data-lang="ru">Уровень глаз пешехода — 1,7 м над землёй с учётом рельефа. Проверка соотношения высоты застройки к ширине улицы.</span>
+          <span data-lang="en">Pedestrian eye level, 1.7 m above terrain. Useful for checking street height-to-width ratio.</span></figcaption>
+      </figure>
+      <figure>
+        <img class="shot" src="examples/case_proposal.png" alt="Проектные объёмы">
+        <figcaption><span data-lang="ru">Проектные объёмы, размещённые языковой моделью по текстовому заданию. Модель получает границы участка и габариты существующих пятен. Выгружаются в GeoJSON.</span>
+          <span data-lang="en">Volumes placed by a language model from a text brief; it receives the site boundary and existing footprints. Exports to GeoJSON.</span></figcaption>
+      </figure>
+      <figure>
+        <img class="shot" src="examples/case_barcelona.png" alt="Эшампле, Барселона">
+        <figcaption><span data-lang="ru">Эшампле, Барселона — сетка Серда со срезанными углами. Тёплым тоном отмечены здания, у которых высота восстановлена по типу: так видно качество данных.</span>
+          <span data-lang="en">Eixample, Barcelona. Warm-toned volumes have heights inferred from building type — data quality stays visible.</span></figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section>
+    <h3><span data-lang="ru">Архитектура</span><span data-lang="en">Architecture</span></h3>
+    <h4><span data-lang="ru">Клиент без сервера</span><span data-lang="en">A client with no server</span></h4>
+    <p>
+      <span data-lang="ru">Своего бэкенда у инструмента нет: браузер сам ходит в Overpass за данными
+        OSM, в AWS Terrain Tiles за высотами и — по ключу пользователя — к выбранному
+        провайдеру моделей. Локальный сервер нужен только чтобы отдать статические файлы.</span>
+      <span data-lang="en">There is no backend: the browser queries Overpass for OSM data, AWS Terrain
+        Tiles for elevation, and — with the user's own key — the chosen model provider. The
+        local server only serves static files.</span>
+    </p>
+
+    <div class="flow">
+      <div class="node"><b>UI</b><span data-lang="ru">Карта, радиус, редактор сцены</span><span data-lang="en">Map, radius, scene editor</span></div>
+      <div class="node worker"><b>Web Worker</b><span data-lang="ru">Overpass → разбор OSM → DEM → триангуляция</span><span data-lang="en">Overpass → OSM parsing → DEM → triangulation</span></div>
+      <div class="node"><b>IndexedDB</b><span data-lang="ru">Кэш ответов на неделю</span><span data-lang="en">Response cache, one week</span></div>
+      <div class="node"><b>three.js</b><span data-lang="ru">Свет, тени, AO, постобработка</span><span data-lang="en">Lighting, shadows, AO, post-processing</span></div>
+      <div class="node"><b>LLM API</b><span data-lang="ru">Рендер, разбор, объёмы</span><span data-lang="en">Render, brief, volumes</span></div>
+    </div>
+
+    <p style="margin-top:22px">
+      <span data-lang="ru">Тяжёлое — сеть, разбор мультиполигонов, обрезка по кругу, экструзия и слияние
+        геометрии — вынесено в фоновый поток. Наружу уезжают типизированные массивы, права
+        на буферы передаются без копирования, поэтому сцена продолжает вращаться, пока
+        строится следующий участок.</span>
+      <span data-lang="en">The heavy work — networking, multipolygon parsing, circular clipping,
+        extrusion and geometry merging — runs in a worker. Typed arrays are transferred, not
+        copied, so the scene keeps spinning while the next site is being built.</span>
+    </p>
+  </section>
+
+  <section>
+    <h3><span data-lang="ru">Инженерные решения</span><span data-lang="en">Engineering decisions</span></h3>
+    <h4><span data-lang="ru">Что пришлось решать по дороге</span><span data-lang="en">Problems solved along the way</span></h4>
+
+    <table>
+      <thead><tr>
+        <th><span data-lang="ru">Проблема</span><span data-lang="en">Problem</span></th>
+        <th><span data-lang="ru">Решение и результат</span><span data-lang="en">Solution and outcome</span></th>
+      </tr></thead>
+      <tbody>
+        <tr>
+          <td><span data-lang="ru">Overpass отвечает десятками секунд</span><span data-lang="en">Overpass takes tens of seconds</span></td>
+          <td><span data-lang="ru">Кэш ответов в IndexedDB на неделю. Повторное открытие участка — <span class="num">≈1 с</span> вместо <span class="num">41 с</span> (плотный квартал Эшампле, 933 здания).</span>
+              <span data-lang="en">IndexedDB response cache. Reopening a site takes <span class="num">≈1 s</span> instead of <span class="num">41 s</span> (dense Eixample block, 933 buildings).</span></td>
+        </tr>
+        <tr>
+          <td><span data-lang="ru">Интерфейс замирал на сборке</span><span data-lang="en">UI froze during builds</span></td>
+          <td><span data-lang="ru">Весь конвейер — в Web Worker, геометрия отдаётся типизированными массивами с передачей владения буферами.</span>
+              <span data-lang="en">The whole pipeline moved into a Web Worker; geometry leaves as typed arrays with transferred buffer ownership.</span></td>
+        </tr>
+        <tr>
+          <td><span data-lang="ru">Карта импорта не наследуется воркерами</span><span data-lang="en">Import maps are not inherited by workers</span></td>
+          <td><span data-lang="ru">Штатный BufferGeometryUtils импортирует three по имени и потому неприменим — слияние геометрии написано своё, на приведении к неиндексированному виду.</span>
+              <span data-lang="en">The stock BufferGeometryUtils imports three by bare name and thus breaks — geometry merging is hand-written over non-indexed conversion.</span></td>
+        </tr>
+        <tr>
+          <td><span data-lang="ru">Вращение сцены тормозило</span><span data-lang="en">Orbiting felt heavy</span></td>
+          <td><span data-lang="ru">Кадр считается только при изменениях; во время вращения падает разрешение и отключается постобработка, в покое качество возвращается; карта теней пересчитывается лишь при смене солнца.</span>
+              <span data-lang="en">Frames render only on change; during orbit the pixel ratio drops and post-processing is off, restored at rest; the shadow map updates only when the sun moves.</span></td>
+        </tr>
+        <tr>
+          <td><span data-lang="ru">Здания висели над склоном</span><span data-lang="en">Buildings floated over slopes</span></td>
+          <td><span data-lang="ru">Верх объёма отсчитывается от отметки в центре пятна, низ опускается до самой низкой точки контура — на рельефе здание садится, а не парит.</span>
+              <span data-lang="en">Volume tops follow the elevation at the footprint centroid; bottoms drop to the lowest contour point, so buildings sit on the slope instead of hovering.</span></td>
+        </tr>
+        <tr>
+          <td><span data-lang="ru">Край земли торчал силуэтом</span><span data-lang="en">The ground edge cut a silhouette</span></td>
+          <td><span data-lang="ru">Дымка привязана к удалению камеры, а не к размеру участка: горизонт растворяется и на общем плане, и при взгляде сверху.</span>
+              <span data-lang="en">Fog is tied to camera distance rather than site size, so the horizon dissolves both in overview and from above.</span></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note">
+      <span data-lang="ru"><strong>Живая перезагрузка с сохранением состояния.</strong> Сервер следит за
+        исходниками и сообщает браузеру через SSE: правка стилей подменяется на лету, правка
+        кода перезагружает страницу и возвращает ровно тот же участок, ракурс, дату солнца и
+        состояние слоёв. Данные берутся из кэша, поэтому цикл правки занимает секунду.</span>
+      <span data-lang="en"><strong>Live reload with state preservation.</strong> The dev server watches
+        sources and notifies the browser over SSE: CSS is hot-swapped, code changes reload the
+        page and restore the same site, camera, solar date and layer state. Data comes from
+        cache, so an edit cycle takes about a second.</span>
+    </div>
+  </section>
+
+  <section>
+    <h3><span data-lang="ru">Достоверность</span><span data-lang="en">Honesty about data</span></h3>
+    <h4><span data-lang="ru">Ограничения показаны в интерфейсе, а не спрятаны</span>
+        <span data-lang="en">Limitations are surfaced, not hidden</span></h4>
+    <p>
+      <span data-lang="ru">Модель настолько точна, насколько заполнен OpenStreetMap. Высота берётся из
+        тега <code>height</code>, затем из этажности, и только потом — из типового значения по
+        назначению здания. Доля восстановленных высот выводится в показателях, а сами такие
+        объёмы можно подсветить отдельным цветом: видно, какой части модели верить нельзя.</span>
+      <span data-lang="en">The model is only as good as OpenStreetMap. Height comes from the
+        <code>height</code> tag, then from storey count, and only then from a typical value by
+        building type. The share of inferred heights is reported in the metrics, and those
+        volumes can be highlighted in a separate colour — so it stays visible which part of the
+        model cannot be trusted.</span>
+    </p>
+    <ul>
+      <li><span data-lang="ru">Формы кровель не строятся — все объёмы плоские.</span>
+          <span data-lang="en">Roof shapes are not modelled — all volumes are flat-topped.</span></li>
+      <li><span data-lang="ru">Открытые DEM имеют шаг около 30 м; в плотной застройке высоты местами включают крыши, и перепад рельефа завышается.</span>
+          <span data-lang="en">Open DEM resolution is about 30 m; in dense areas elevations partly include rooftops, overstating relief.</span></li>
+      <li><span data-lang="ru">Показатели считаются по кругу целиком, включая улицы и воду, а не по границам землеотвода.</span>
+          <span data-lang="en">Metrics cover the whole circle, streets and water included — not a cadastral parcel.</span></li>
+      <li><span data-lang="ru">Часовой пояс определяется по долготе: время истинное солнечное, а не административное.</span>
+          <span data-lang="en">The time zone is derived from longitude: solar time, not administrative time.</span></li>
+    </ul>
+  </section>
+
+  <section>
+    <h3><span data-lang="ru">Дальше</span><span data-lang="en">Next</span></h3>
+    <h4><span data-lang="ru">Куда это растёт</span><span data-lang="en">Where it goes</span></h4>
+    <p>
+      <span data-lang="ru">Ближайший шаг — накопительный расчёт инсоляции: прогнать солнце по суткам
+        с получасовым шагом и покрасить землю и фасады по числу солнечных часов. Российские
+        санитарные нормы требуют непрерывной инсоляции, поэтому такой расчёт превращает
+        картинку в аргумент. Дальше — двусторонний обмен с QGIS и сравнение показателей
+        «до и после» размещения проектных объёмов.</span>
+      <span data-lang="en">The next step is cumulative insolation: sweep the sun across a day in
+        half-hour steps and colour ground and façades by hours of direct sunlight. Russian
+        sanitary norms mandate continuous insolation, so this turns an image into an argument.
+        After that: two-way exchange with QGIS, and before/after comparison of metrics when
+        proposed volumes are placed.</span>
+    </p>
+    <p>
+      <span data-lang="ru">Инструмент — вторая часть связки: сначала сбор данных о среде
+        (прибор съёмки фасадов на маршруте), затем её моделирование и анализ.</span>
+      <span data-lang="en">The tool is the second half of a pair: first collecting data about the urban
+        environment (a street-facade survey rig), then modelling and analysing it.</span>
+    </p>
+
+    <div class="stack">
+      <span class="pill">three.js r169</span>
+      <span class="pill">Web Workers</span>
+      <span class="pill">WebGL · SSAO · PCF shadows</span>
+      <span class="pill">IndexedDB</span>
+      <span class="pill">Leaflet</span>
+      <span class="pill">Overpass API</span>
+      <span class="pill">AWS Terrain Tiles</span>
+      <span class="pill">Server-Sent Events</span>
+      <span class="pill">Anthropic · Gemini · OpenAI · fal.ai</span>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <div class="wrap">
+    <span data-lang="ru">Данные © участники OpenStreetMap (ODbL) · рельеф AWS Terrain Tiles ·
+      геокодер Nominatim · <a href="index.html">открыть инструмент</a></span>
+    <span data-lang="en">Data © OpenStreetMap contributors (ODbL) · elevation from AWS Terrain Tiles ·
+      geocoding by Nominatim · <a href="index.html">open the tool</a></span>
+  </div>
+</footer>
+
+<script>
+document.querySelectorAll('.lang').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const set = btn.dataset.set;
+    document.body.className = set;
+    document.documentElement.lang = set;
+    document.querySelectorAll('.lang').forEach(b => b.classList.toggle('on', b === btn));
+    try { localStorage.setItem('massing.caseLang', set); } catch {}
+  });
+});
+try {
+  const saved = localStorage.getItem('massing.caseLang');
+  if (saved) document.querySelector(`.lang[data-set="${saved}"]`)?.click();
+} catch {}
+</script>
+</body>
+</html>
